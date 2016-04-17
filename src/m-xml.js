@@ -33,8 +33,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 */
-
-+function (window, document, undefined) {
+/**
+ *
+ * @param   {Object} root
+ * @param   {function} factory
+ *
+ * @returns {Object}
+ */
+(function (root, factory) {
+	if (typeof define === 'function' && define.amd) {
+		define(factory);
+	} else if (typeof module === 'object' && module.exports) {
+		module.exports = factory();
+	} else {
+		root.magicXML = factory();
+	}
+}(this, function () {
+	"use strict";
 
     // Declare variables as early as possible.
     var j = 0,
@@ -50,10 +65,20 @@ THE SOFTWARE.
     // Closure prevents access to supporting functions we need by placing them
     // in encapsulating function scope.
 
+    /**
+     *
+     * @param   {String} candidate
+     * @returns {boolean}
+     */
     function isXML(candidate) {
         return (candidate.indexOf('<?xml version="1.0"') >= 0);
     }
 
+    /**
+     *
+     * @param   {String} source
+     * @returns {Document}
+     */
     function loadXML(source) {
         var xhr = (window.ActiveXObject || "ActiveXObject" in window) ?
                 new ActiveXObject("Msxml2.XMLHTTP.3.0") :
@@ -63,11 +88,20 @@ THE SOFTWARE.
         xhr.send();
         return xhr.responseXML;
     }
-    
+
+    /**
+     *
+     * @param   {String} xmlString
+     * @returns {Document|ActiveXObject}
+     */
     function parseXMLString(xmlString) {
         return options.xmlStringParser.parse(xmlString);
     }
-    
+
+    /**
+     *
+     * @returns {{parse: parse}}
+     */
     function getXMLStringParser() {
         var parse = function() {
             console.error('[Magic XML] No XML string parser available.');
@@ -77,7 +111,7 @@ THE SOFTWARE.
             parse = function(xmlString) {
                 var parser = new window.DOMParser();
                 return parser.parseFromString(xmlString, "text/xml");
-            }
+            };
         }
         else if (window.ActiveXObject || "ActiveXObject" in window) {
             parse = function(xmlString) {
@@ -85,7 +119,7 @@ THE SOFTWARE.
                 dom.async = false;
                 dom.loadXML(xmlString);
                 return dom;
-            }
+            };
         }
         else {
             console.warn("[Magic XML] No XML string parser available. String " + 
@@ -94,9 +128,14 @@ THE SOFTWARE.
 
         return {
             parse: parse
-        }
+        };
     }
 
+    /**
+     *
+     * @param   {String} source
+     * @returns {*}
+     */
     function loadXSL(source) {
         if (window.ActiveXObject || "ActiveXObject" in window) {
             var xsl = new ActiveXObject("MSXML2.FreeThreadedDOMDocument.6.0");
@@ -109,6 +148,13 @@ THE SOFTWARE.
         return loadXML(source);
     }
 
+    /**
+     *
+     * @param   {String} xml
+     * @param   {String} xsl
+     * @param   {Array} parameters
+     * @returns {DocumentFragment}
+     */
     function getTransformFragment(xml, xsl, parameters) {
         var i = 0,
             parameter,
@@ -129,10 +175,18 @@ THE SOFTWARE.
         return xslt.transformToFragment(xml, document);
     }
 
+    /**
+     *
+     * @param   {String} xml
+     * @param   {String} xsl
+     * @param   {Array} parameters
+     * @returns {DocumentFragment}
+     */
     function getActiveXTransform(xml, xsl, parameters) {
         var i = 0,
-                processor,
-                template = new ActiveXObject("MSXML2.XSLTemplate.6.0");
+            parameter,
+            processor,
+            template = new ActiveXObject("MSXML2.XSLTemplate.6.0");
 
         template.stylesheet = xsl;
         processor = template.createProcessor();
@@ -150,21 +204,74 @@ THE SOFTWARE.
         processor.transform();
         return processor.output;
     }
-
-    function makeAttributeSelector(name) {
-        return '[' + name + ']';
-    }
-
     // End supporting function definitions.
-      
-    // Declare Magic XML functionality.
-    var x = {
+    
+        /**
+         * Transforms an XML document using a specified XSLT, passing in any
+         * XSLT parameters that are supplied and taking care of cross browser
+         * compatability issues automatically.
+         * 
+         * @param   {String} xmlSource Path to file or whole document as string
+         * @param   {String} xslSource Path to file or whole document as string
+         * @param   {Array} parameters
+         * @returns {DocumentFragment}
+         */
+        function _transform(xmlSource, xslSource, parameters) {
+            var xml = (isXML(xmlSource)) ? parseXMLString(xmlSource)
+                    : loadXML(xmlSource),
+                xsl = (isXML(xslSource)) ? parseXMLString(xslSource)
+                    : loadXSL(xslSource);
 
-        /// <summary>
-        /// Configures the script to use non-default names for attributes,
-        /// and/or an alternative XML string parser.
-        /// </summary>
-        configure: function (xmlSourceAttribute, xslSourceAttribute,
+            if (window.ActiveXObject || "ActiveXObject" in window) {
+                return getActiveXTransform(xml, xsl, parameters);
+            }
+            else {
+                return getTransformFragment(xml, xsl, parameters);
+            }
+        }
+
+        /**
+         * Gets transformed version of an XML document using transform() then
+         * replaces the content of a target DOM element with the result.
+         *
+         * @param   {String|Element} target Query selector or DOM node
+         * @param   {String} xmlSource Path to file or whole document as string
+         * @param   {String} xslSource Path to file or whole document as string
+         * @param   {Array} parameters
+         * @returns {undefined}
+         */
+        function _transformAndReplace(target, xmlSource, xslSource, parameters) {
+            var transformed = _transform(xmlSource, xslSource, parameters);
+
+            if (typeof target === 'string') {
+                // If a query selector is passed in, then find the requested
+                // DOM node else expect a DOM node to have been passsed.
+                target = document.querySelector(target);
+            }
+
+            if (window.ActiveXObject || "ActiveXObject" in window) {
+                target.innerHTML = transformed;
+            }
+            else {
+                target.parentNode.replaceChild(transformed, target);
+            }
+        }
+
+        /**
+         * Configures the script to use non-default names for attributes, and/or an alternative
+         * XML string parser.
+         *
+         * @param   {String} xmlSourceAttribute Name of an attribute of a DOMElement used to define
+         *                                       the source of xml-data (path to file or document as
+         *                                       string)
+         * @param   {String} xslSourceAttribute Name of an attribute of a DOMElement used to define
+         *                                       the source of xsl-document (path to file or
+         *                                       document as string)
+         * @param   {String} xslParamAttribute
+         * @param   {Object} xmlStringParser An object with one method named "parse"
+         * @returns {undefined}
+         */
+        function _configure(xmlSourceAttribute, xslSourceAttribute,
             xslParamAttribute, xmlStringParser) {
 
             if (typeof xmlSourceAttribute === 'string')
@@ -175,62 +282,24 @@ THE SOFTWARE.
 
             if (typeof xslParamAttribute === 'string')
                 options.xslParamAttribute = xslParamAttribute;
-                
+
             if (typeof xmlStringParser === 'function')
                 options.xmlStringParser = xmlStringParser;
 
-        },
-        
-        /// <summary>
-        /// Transforms an XML document using a specified XSLT, passing in any
-        /// XSLT parameters that are supplied and taking care of cross browser
-        /// compatability issues automatically.
-        /// </summary>
-        transform: function (xmlSource, xslSource, parameters) {
-            var xml = (isXML(xmlSource)) ? parseXMLString(xmlSource) 
-                    : loadXML(xmlSource),
-                xsl = (isXML(xslSource)) ? parseXMLString(xslSource) 
-                    : loadXSL(xslSource);
+        }
 
-            if (window.ActiveXObject || "ActiveXObject" in window) {
-                return getActiveXTransform(xml, xsl, parameters);
-            }
-            else {
-                return getTransformFragment(xml, xsl, parameters);
-            }
-        },
-
-        /// <summary>
-        /// Gets transformed version of an XML document using transform() then
-        /// replaces the content of a target DOM element with the result.
-        /// </summary>
-        transformAndReplace: function (target, xmlSource, xslSource,
-            parameters) {
-            var transformed = x.transform(xmlSource, xslSource, parameters);
-
-            if (typeof target === 'string') {
-                // If a query selector is passed in, then find the requested
-                // DOM node else expect a DOM node to have been passsed.
-                target = document.querySelector(target)
-            }
-
-            if (window.ActiveXObject || "ActiveXObject" in window) {
-                target.innerHTML = transformed;
-            }
-            else {
-                target.parentNode.replaceChild(transformed, target);
-            }
-        },
-
-        /// <summary>
-        /// Search through the DOM for elements which match the specified
-        /// selector and apply transformAndReplace() to their contents where a
-        /// source XML and XSLT file are specified by attributes.
-        /// </summary>
-        /// <remarks>
-        /// If no selector is specified, will parse all elements on the page.
-        /// </remarks>
-        parse: function (selector) {
+        /**
+         * Search through the DOM for elements which match the specified
+         * selector and apply transformAndReplace() to their contents where a
+         * source XML and XSLT file are specified by attributes.
+         *
+         * If no selector is specified, will parse all elements on the page.
+         *
+         * @param   {String} selector Query selector to find DOM elements used to put the xslt
+         *                            result, respecting the configured data-attributes
+         * @returns {undefined}
+         */
+        function _parse(selector) {
 
             if (typeof selector !== 'string')
                 selector = '';
@@ -239,7 +308,7 @@ THE SOFTWARE.
             var elements = document.querySelectorAll(selector +
                 '[' + options.xmlSourceAttribute +
                 '][' + options.xslSourceAttribute + ']');
-            
+
             // Automatically deal with appropriately marked up DOM elements.
             for (j=0; j < elements.length; j++) {
                 elementParams = undefined;
@@ -247,12 +316,10 @@ THE SOFTWARE.
 
                 // Pull in any parameters the element may want to pass.
                 if (element.attributes[options.xslParamAttribute]) {
-                    elementParams = JSON
-                        .parse(element.attributes[options.xslParamAttribute]
-                        .value);
+                    elementParams = JSON.parse(element.attributes[options.xslParamAttribute].value);
                 }
 
-                x.transformAndReplace(element,
+                _transformAndReplace(element,
                     element.attributes[options.xmlSourceAttribute].value,
                     element.attributes[options.xslSourceAttribute].value,
                     elementParams);
@@ -264,9 +331,13 @@ THE SOFTWARE.
                 console.warn('[Magic XML] No magic detected on page, is script loaded after all DOM elements?');
             }
         }
-    };
 
-    // Throw 'x' into global scope to allow use in other scripts.
-    window.magicXML = x;
-    
-}(window, document);
+    // Module-API
+    // Declare Magic XML functionality.
+    return {
+        configure: _configure,
+        transform: _transform,
+        transformAndReplace: _transformAndReplace,
+        parse: _parse
+    };
+}));
