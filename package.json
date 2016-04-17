@@ -1,0 +1,34 @@
+{
+  "name": "magicxmlTests",
+  "version": "0.9.0",
+  "description": "Tests for the cross-browser JavaScript XSLT plugin: magicxml",
+  "main": "karma.conf.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "karma run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rekrut/magicxml.git"
+  },
+  "keywords": [
+    "tests",
+    "xslt",
+    "javascript",
+    "cross-browser"
+  ],
+  "author": "Daniel Moritz",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rekrut/magicxml/issues"
+  },
+  "homepage": "https://github.com/rekrut/magicxml#readme",
+  "devDependencies": {
+    "karma": "^0.13.22",
+    "karma-chrome-launcher": "^0.2.3",
+    "karma-requirejs": "^0.2.6",
+    "requirejs": "^2.2.0"
+  }
+}
