@@ -250,7 +250,10 @@ THE SOFTWARE.
             }
 
             if (window.ActiveXObject || "ActiveXObject" in window) {
-                target.innerHTML = transformed;
+                var n = document.createElement('div');
+                n.innerHTML = transformed;
+                target.parentNode.insertBefore(n.firstChild, target);
+                target.parentNode.removeChild(target);
             }
             else {
                 target.parentNode.replaceChild(transformed, target);
