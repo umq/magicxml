@@ -76,17 +76,27 @@ THE SOFTWARE.
 
     /**
      *
-     * @param   {String} source
-     * @returns {Document}
+     * @param   {String} source 
+     * @param   {Function} callback takes the Document as a parameter
+     * @returns {undefined}
      */
-    function loadXML(source) {
-        var xhr = (window.ActiveXObject || "ActiveXObject" in window) ?
+    function loadXML(source, callback) {
+        if  (isXML(source)) {
+            callback(parseXMLString(source));
+        }
+        else {
+            var xhr = (window.ActiveXObject || "ActiveXObject" in window) ?
                 new ActiveXObject("Msxml2.XMLHTTP.3.0") :
                 new XMLHttpRequest();
 
-        xhr.open("GET", source, false);
-        xhr.send();
-        return xhr.responseXML;
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4 && xhr.status >= 200 && xhr.status < 400) {
+                    callback(xhr.responseXML);
+                }
+            };
+            xhr.open("GET", source);
+            xhr.send();
+        }
     }
 
     /**
@@ -133,19 +143,24 @@ THE SOFTWARE.
 
     /**
      *
-     * @param   {String} source
-     * @returns {*}
+     * @param   {String} source 
+     * @param   {Function} callback takes the Document as a parameter
+     * @returns {undefined}
      */
-    function loadXSL(source) {
-        if (window.ActiveXObject || "ActiveXObject" in window) {
+    function loadXSL(source, callback) {
+        if (isXML(source)) {
+            callback(parseXMLString(source));
+        }
+        else if (window.ActiveXObject || "ActiveXObject" in window) {
             var xsl = new ActiveXObject("MSXML2.FreeThreadedDOMDocument.6.0");
             xsl.async = false;
             xsl.load(source);
-            return xsl;
+            callback(xsl);
+    }
+    else {
+            // If we don't need to use ActiveX just get normally.
+            loadXML(source, callback);
         }
-
-        // If we don't need to use ActiveX just get normally.
-        return loadXML(source);
     }
 
     /**
@@ -214,20 +229,20 @@ THE SOFTWARE.
          * @param   {String} xmlSource Path to file or whole document as string
          * @param   {String} xslSource Path to file or whole document as string
          * @param   {Array} parameters
-         * @returns {DocumentFragment}
+         * @param   {Function} callback takes DocumentFragment as a parameter
+         * @returns {undefined}
          */
-        function _transform(xmlSource, xslSource, parameters) {
-            var xml = (isXML(xmlSource)) ? parseXMLString(xmlSource)
-                    : loadXML(xmlSource),
-                xsl = (isXML(xslSource)) ? parseXMLString(xslSource)
-                    : loadXSL(xslSource);
-
-            if (window.ActiveXObject || "ActiveXObject" in window) {
-                return getActiveXTransform(xml, xsl, parameters);
-            }
-            else {
-                return getTransformFragment(xml, xsl, parameters);
-            }
+        function _transform(xmlSource, xslSource, parameters, callback) {
+            loadXML(xmlSource, function(xml) {
+                loadXSL(xslSource, function(xsl) {
+                    if (window.ActiveXObject || "ActiveXObject" in window) {
+                        callback(getActiveXTransform(xml, xsl, parameters));
+                    }
+                    else {
+                        callback(getTransformFragment(xml, xsl, parameters));
+                    }
+                });
+            });
         }
 
         /**
@@ -241,23 +256,23 @@ THE SOFTWARE.
          * @returns {undefined}
          */
         function _transformAndReplace(target, xmlSource, xslSource, parameters) {
-            var transformed = _transform(xmlSource, xslSource, parameters);
-
             if (typeof target === 'string') {
                 // If a query selector is passed in, then find the requested
                 // DOM node else expect a DOM node to have been passsed.
                 target = document.querySelector(target);
             }
 
-            if (window.ActiveXObject || "ActiveXObject" in window) {
-                var n = document.createElement('div');
-                n.innerHTML = transformed;
-                target.parentNode.insertBefore(n.firstChild, target);
-                target.parentNode.removeChild(target);
-            }
-            else {
-                target.parentNode.replaceChild(transformed, target);
-            }
+            _transform(xmlSource, xslSource, parameters, function(transformed) {
+                if (window.ActiveXObject || "ActiveXObject" in window) {
+                    var n = document.createElement('div');
+                    n.innerHTML = transformed;
+                    target.parentNode.insertBefore(n.firstChild, target);
+                    target.parentNode.removeChild(target);
+                }
+                else {
+                    target.parentNode.replaceChild(transformed, target);
+                }
+            });
         }
 
         /**
