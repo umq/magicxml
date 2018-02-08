@@ -89,7 +89,7 @@ THE SOFTWARE.
 
             xhr.onreadystatechange = function() {
                 if (xhr.readyState == 4 && xhr.status >= 200 && xhr.status < 400) {
-                    callback(xhr.responseXML);
+                    callback(xhr.responseXML || parseXMLString(xhr.responseText));
                 }
             };
             xhr.open("GET", source);
