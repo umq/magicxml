@@ -148,13 +148,15 @@ THE SOFTWARE.
      * @returns {undefined}
      */
     function loadXSL(source, callback) {
-        if (isXML(source)) {
-            callback(parseXMLString(source));
-        }
-        else if (window.ActiveXObject || "ActiveXObject" in window) {
+        if (window.ActiveXObject || "ActiveXObject" in window) {
             var xsl = new ActiveXObject("MSXML2.FreeThreadedDOMDocument.6.0");
             xsl.async = false;
-            xsl.load(source);
+            if (isXML(source)) {
+                xsl.loadXML(source);
+            } 
+            else {
+                xsl.load(source);
+            }
             callback(xsl);
     }
     else {
