@@ -223,7 +223,10 @@ THE SOFTWARE.
             }
 
             if (window.ActiveXObject || "ActiveXObject" in window) {
-                target.innerHTML = transformed;
+                var node = document.createElement('div');
+                node.innerHTML = transformed;
+                target.parentNode.insertBefore(node.firstChild, target);
+                target.parentNode.removeChild(target);
             }
             else {
                 target.parentNode.replaceChild(transformed, target);
