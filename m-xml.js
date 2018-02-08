@@ -55,13 +55,18 @@ THE SOFTWARE.
     }
 
     function loadXML(source) {
-        var xhr = (window.ActiveXObject || "ActiveXObject" in window) ?
+        if (isXML(source)) {
+            return parseXMLString(source);
+        }
+        else {
+            var xhr = (window.ActiveXObject || "ActiveXObject" in window) ?
                 new ActiveXObject("Msxml2.XMLHTTP.3.0") :
                 new XMLHttpRequest();
 
-        xhr.open("GET", source, false);
-        xhr.send();
-        return xhr.responseXML;
+            xhr.open("GET", source, false);
+            xhr.send();
+            return xhr.responseXML;
+        }
     }
     
     function parseXMLString(xmlString) {
@@ -101,7 +106,12 @@ THE SOFTWARE.
         if (window.ActiveXObject || "ActiveXObject" in window) {
             var xsl = new ActiveXObject("MSXML2.FreeThreadedDOMDocument.6.0");
             xsl.async = false;
-            xsl.load(source);
+            if (isXML(source)) {
+                xsl.loadXML(source);
+            }
+            else {
+                xsl.load(source);
+            }
             return xsl;
         }
 
@@ -187,10 +197,8 @@ THE SOFTWARE.
         /// compatability issues automatically.
         /// </summary>
         transform: function (xmlSource, xslSource, parameters) {
-            var xml = (isXML(xmlSource)) ? parseXMLString(xmlSource) 
-                    : loadXML(xmlSource),
-                xsl = (isXML(xslSource)) ? parseXMLString(xslSource) 
-                    : loadXSL(xslSource);
+            var xml = loadXML(xmlSource),
+                xsl = loadXSL(xslSource);
 
             if (window.ActiveXObject || "ActiveXObject" in window) {
                 return getActiveXTransform(xml, xsl, parameters);
