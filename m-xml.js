@@ -59,9 +59,7 @@ THE SOFTWARE.
             return parseXMLString(source);
         }
         else {
-            var xhr = (window.ActiveXObject || "ActiveXObject" in window) ?
-                new ActiveXObject("Msxml2.XMLHTTP.3.0") :
-                new XMLHttpRequest();
+            var xhr = new XMLHttpRequest();
 
             xhr.open("GET", source, false);
             xhr.send();
