@@ -63,7 +63,7 @@ THE SOFTWARE.
 
             xhr.open("GET", source, false);
             xhr.send();
-            return xhr.responseXML;
+            return xhr.responseXML || parseXMLString(xhr.responseText);
         }
     }
     
