@@ -85,9 +85,7 @@ THE SOFTWARE.
             callback(parseXMLString(source));
         }
         else {
-            var xhr = (window.ActiveXObject || "ActiveXObject" in window) ?
-                new ActiveXObject("Msxml2.XMLHTTP.3.0") :
-                new XMLHttpRequest();
+            var xhr = new XMLHttpRequest();
 
             xhr.onreadystatechange = function() {
                 if (xhr.readyState == 4 && xhr.status >= 200 && xhr.status < 400) {
