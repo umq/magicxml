@@ -253,9 +253,10 @@ THE SOFTWARE.
          * @param   {String} xmlSource Path to file or whole document as string
          * @param   {String} xslSource Path to file or whole document as string
          * @param   {Array} parameters
+         * @param   {Function} callback to do something after replacement
          * @returns {undefined}
          */
-        function _transformAndReplace(target, xmlSource, xslSource, parameters) {
+        function _transformAndReplace(target, xmlSource, xslSource, parameters, callback) {
             if (typeof target === 'string') {
                 // If a query selector is passed in, then find the requested
                 // DOM node else expect a DOM node to have been passsed.
@@ -272,6 +273,7 @@ THE SOFTWARE.
                 else {
                     target.parentNode.replaceChild(transformed, target);
                 }
+                typeof callback === 'function' && callback();
             });
         }
 
