@@ -267,7 +267,9 @@ THE SOFTWARE.
                 if (window.ActiveXObject || "ActiveXObject" in window) {
                     var n = document.createElement('div');
                     n.innerHTML = transformed;
-                    target.parentNode.insertBefore(n.firstChild, target);
+                    Array.prototype.slice.call(n.childNodes, 0).forEach(function(node){
+                        target.parentNode.insertBefore(node, target);
+                    });
                     target.parentNode.removeChild(target);
                 }
                 else {
